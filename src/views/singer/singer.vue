@@ -1,6 +1,10 @@
 <template>
   <div class="singer">
-    Singer
+    <list-view :data="singers" @selectItem="selectSinger"></list-view>
+
+    <transition name="move">
+      <router-view></router-view>
+    </transition>
   </div>
 </template>
 
@@ -10,6 +14,11 @@
 
   import {getSingerList} from "../../api/singer.js";
 
+  import {SET_SINGER} from "../../store/mutations-types.js";
+  import {mapMutations} from "vuex";
+
+  import ListView from "../../components/common/listview/listview.vue";
+
   const HOT_NAME = "热门";
   const HOT_SINGER_LEN = 10;
 
@@ -17,16 +26,23 @@
     name: "singer",
     data() {
       return {
-        singers: []
+        singers: [],
+        transitionName: ""
       }
     },
+    components: {
+      ListView
+    },
     methods: {
+      selectSinger(singer) {
+        this.$router.push({path: `/singer/${singer.id}`});
+        this.setSinger(singer);
+      },
       _getSingerList() {
         getSingerList().then(res => {
           if(res.code === ERR_OK) {
-            console.log(res.data);
-            this.singers = res.data.list;
-            console.log(this._normalizeSinger(this.singers));
+            this.singers = this._normalizeSinger(res.data.list);
+            console.log(this.singers);
           }
         })
       },
@@ -79,7 +95,10 @@
 
         return hot.concat(ret);
 
-      }
+      },
+      ...mapMutations({
+        setSinger: SET_SINGER  // 把mutations中名为SET_SINGER的值的方法 映射到setSinger中 之后就可以使用setSinger来调用方法了
+      })
     },
     created() {
       this._getSingerList();
@@ -89,6 +108,11 @@
 </script>
 
 <style scoped lang="stylus" rel="stylesheet/stylus">
+  .move-enter-active, .move-leave-active
+    transition all 0.5s ease
+  .move-enter, .move-leave-to
+    transform translate3d(100%, 0, 0)
+
   .singer
     position: fixed
     top: 88px

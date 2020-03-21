@@ -5,13 +5,17 @@ Vue.use(VueRouter);
 
 const Recommend = () => import("../views/recommend/recommend.vue");
 const Singer = () => import("../views/singer/singer.vue");
+const SingerDetail = () => import("../views/singer-detail/singer-detail.vue");
 const Rank = () => import("../views/rank/rank.vue");
 const Search = () => import("../views/search/search.vue");
 
 const routes = [
   {path: "/", redirect: "/recommend"},
   {path: "/recommend", component: Recommend},
-  {path: "/singer", component: Singer},
+  {path: "/singer", component: Singer, meta: {index: 1},
+    children: [
+      {path: ":id", component: SingerDetail, meta: {index: 2}}
+    ]},
   {path: "/rank", component: Rank},
   {path: "/search", component: Search}
 ];
