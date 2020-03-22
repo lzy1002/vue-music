@@ -9,12 +9,24 @@ module.exports = {
   },
   devServer: {
     proxy: {
-      "/api": {
+      "/api/getDiscList": {
         target: "https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg",
         secure: false,
         changeOrigin: true,
         pathRewrite: {
           "^/api/getDiscList": ""
+        },
+        headers: {
+          referer: "https://c.y.qq.com/",
+          host: "c.y.qq.com"
+        }
+      },
+      "/api/getSongVkey": {
+        target: "https://u.y.qq.com/cgi-bin/musicu.fcg",
+        secure: false,
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/getSongVkey": ""
         },
         headers: {
           referer: "https://c.y.qq.com/",

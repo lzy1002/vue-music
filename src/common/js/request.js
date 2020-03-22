@@ -7,7 +7,7 @@ const instance = axios.create({
 export function request(config) {
   instance.interceptors.request.use(config => config, err => console.log(err));
 
-  instance.interceptors.response.use(data => data.data, err => console.log(err));
+  instance.interceptors.response.use(data => data, err => console.log(err));
 
   return instance(config);
 

@@ -12,9 +12,9 @@ const Search = () => import("../views/search/search.vue");
 const routes = [
   {path: "/", redirect: "/recommend"},
   {path: "/recommend", component: Recommend},
-  {path: "/singer", component: Singer, meta: {index: 1},
-    children: [
-      {path: ":id", component: SingerDetail, meta: {index: 2}}
+  {path: "/singer", component: Singer,
+      children: [
+      {path: ":id", component: SingerDetail}
     ]},
   {path: "/rank", component: Rank},
   {path: "/search", component: Search}
