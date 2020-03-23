@@ -18,5 +18,31 @@ export function getData(el, name, value) {  // 用于获取或设置传入元素
   }else {
     return el.getAttribute(name);
   }
+}
 
+let elementStyle = document.createElement("div").style;
+let vendor = (function () {  // 该方法是一个自调用函数 用于检测用户当前是什么浏览器  返回一个兼容前缀
+  let transformNames = {
+    webkit: "webkitTransform",
+    Moz: "MozTransform",
+    O: "OTransform",
+    ms: "msTransform",
+    standard: "transform"
+  };
+
+  for(let key in transformNames) {
+    if(elementStyle[transformNames[key]] !== undefined) {
+      return key;
+    }
+  }
+
+  return false;
+})();
+
+export function prefixStyle(style) {  // 该方法用于将传入的style根据当前是什么浏览器添加对应的前缀
+  if(vendor === false) return false;
+
+  if(vendor === "standard") return style;
+
+  return vendor + style.charAt(0).toUpperCase() + style.substr(1);
 }

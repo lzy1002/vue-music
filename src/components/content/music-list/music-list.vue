@@ -1,15 +1,25 @@
 <template>
   <div class="music-list">
-    <div class="back">
+    <div class="back" @click="back">
       <i class="icon-back"></i>
     </div>
     <h1 class="title" v-html="title"></h1>
     <div class="bg-image" :style="imageUrl" ref="bgImage">
-      <div class="filter"></div>
+      <div class="play-wrapper" v-if="songs.length">
+        <div class="play" ref="playBtn">
+          <i class="icon-play"></i>
+          <span class="text">随机播放全部</span>
+        </div>
+      </div>
+      <div class="filter" ref="filter"></div>
     </div>
-    <scroll class="list" :data="songs" ref="list">
+    <div class="bg-layer" ref="bgLayer"></div>
+    <scroll class="list" :probe-type="probeType" :listen-scroll="listenScroll" :data="songs" @scroll="scroll" ref="list">
       <div class="song-list-wrapper">
-        <song-list :songs="songs"></song-list>
+        <song-list :songs="songs" @selectItem="selectItem"></song-list>
+      </div>
+      <div class="loading-container" v-if="!songs.length">
+        <loading></loading>
       </div>
     </scroll>
   </div>
@@ -17,7 +27,16 @@
 
 <script>
   import Scroll from "../../common/scroll/scroll.vue";
+  import Loading from "../../common/loading/loading.vue";
   import SongList from "../song-list/song-list.vue";
+
+  import {mapActions} from "vuex";
+
+  import {prefixStyle} from "../../../common/js/dom.js";
+
+  const TITLE_HEIGHT = 40;
+
+  const transform = prefixStyle("transform");
 
   export default {
     name: "music-list",
@@ -37,15 +56,75 @@
         }
       }
     },
+    data() {
+      return {
+        scrollY: -1
+      }
+    },
+    created() {
+      this.probeType = 3;
+      this.listenScroll = true;
+    },
     mounted() {
-      this.$refs.list.$el.style.top = `${this.$refs.bgImage.clientHeight}px`;
+      this.bgImageHeight = this.$refs.bgImage.clientHeight;  // 拿到图片的高度
+      this.layerMaxMove = -this.bgImageHeight + TITLE_HEIGHT;  // 拿到layer的最大滚动出去的距离
+      this.$refs.list.$el.style.top = `${this.bgImageHeight}px`;
+    },
+    methods: {
+      scroll(pos) {
+        this.scrollY = pos.y;
+      },
+      back() {
+        this.$router.back();
+      },
+      selectItem(item, index) {  // item中存储的是音乐列表中被点击的那一个音乐的数据 index是当前这首音乐在音乐列表中的索引
+        this.selectPlay({  // 调用actions中的方法 将当前歌手的音乐列表和当前点击的音乐在音乐列表中的索引传递过去
+          list: this.songs,
+          index
+        })
+      },
+      ...mapActions([
+        "selectPlay"
+      ])
     },
     computed: {
       imageUrl() {
         return `backgroundImage: url(${this.bgImage})`;
       }
     },
+    watch: {
+      scrollY(newY) {
+        let maxMove = Math.max(this.layerMaxMove, newY);  // 计算layer的滚动距离 目的是当layer滚动到一定位置之后不再跟随可滚动区域移动 而是固定在某个位置
+        let zIndex = 0;
+        let scale = 1;
+        let blur = 0;
+        this.$refs.bgLayer.style[transform] = `translate3d(0, ${maxMove}px, 0)`;
+        const percent = Math.abs(newY / this.bgImageHeight);  // 通过该公式计算出可滚动区域当前移动的距离占背景图片高度的百分比 这个百分比用于计算图片的缩放比例和高斯模糊的效果
+        if(newY > 0) {
+          zIndex = 10;
+          scale = 1 + percent;
+        }else {
+          blur = Math.min(20 * percent, 20);
+        }
+        this.$refs.filter.style["backdrop-filter"] = `blur(${blur}px)`;
+
+        this.$refs.bgImage.style[transform] = `scale(${scale})`;
+
+        if(newY <= this.layerMaxMove) {
+          zIndex = 10;
+          this.$refs.bgImage.style.height = TITLE_HEIGHT + "px";
+          this.$refs.bgImage.style.paddingTop = 0;
+          this.$refs.playBtn.style.display = "none";
+        }else {
+          this.$refs.bgImage.style.height = 0 + "px";
+          this.$refs.bgImage.style.paddingTop = "70%";
+          this.$refs.playBtn.style.display = "";
+        }
+        this.$refs.bgImage.style.zIndex = zIndex;
+      }
+    },
     components: {
+      Loading,
       Scroll,
       SongList
     }
@@ -133,7 +212,6 @@
       bottom: 0
       width: 100%
       background: $color-background
-      overflow hidden
       .song-list-wrapper
         padding: 20px 30px
       .loading-container
