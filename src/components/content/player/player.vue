@@ -15,25 +15,32 @@
         <div class="middle">
           <div class="middle-l">
             <div class="cd-wrapper" ref="cdWrapper">
-              <div class="cd">
+              <div class="cd" :class="cdClass">
                 <img class="image" :src="currentSong.image">
               </div>
             </div>
           </div>
         </div>
         <div class="bottom">
+          <div class="progress-wrapper">
+            <span class="time time-l">{{formatTime(currentTime)}}</span>
+            <div class="progress-bar-wrapper">
+              <progress-bar :percent="percent" @percentChange="percentChange"></progress-bar>
+            </div>
+            <span class="time time-r">{{formatTime(currentSong.duration)}}</span>
+          </div>
           <div class="operators">
             <div class="icon i-left">
               <i class="icon-sequence"></i>
             </div>
-            <div class="icon i-left">
-              <i class="icon-prev"></i>
+            <div class="icon i-left" :class="disableCls">
+              <i class="icon-prev" @click="prev"></i>
             </div>
-            <div class="icon i-center">
-              <i class="icon-play"></i>
+            <div class="icon i-center" :class="disableCls">
+              <i :class="normalPlayIcon" @click="togglePlaying"></i>
             </div>
-            <div class="icon i-right">
-              <i class="icon-next"></i>
+            <div class="icon i-right" :class="disableCls">
+              <i class="icon-next" @click="next"></i>
             </div>
             <div class="icon i-right">
               <i class="icon icon-not-favorite"></i>
@@ -45,46 +52,79 @@
     <transition name="mini">
       <div class="mini-player" @click="open" v-show="!fullScreen">  <!--如果全屏的播放器没有显示 那么这里的mini播放器就会显示 反之则隐藏-->
         <div class="icon">
-          <img width="40" height="40" :src="currentSong.image">
+          <img width="40" height="40" :src="currentSong.image" :class="cdClass">
         </div>
         <div class="text">
           <h2 class="name" v-html="currentSong.name"></h2>
           <p class="desc" v-html="currentSong.singer"></p>
         </div>
-        <div class="control"></div>
+        <div class="control">
+          <i :class="miniPlayIcon" @click.stop="togglePlaying"></i>
+        </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
-
+    <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime"></audio>
   </div>
 </template>
 
 <script>
   import {mapGetters, mapMutations} from "vuex";
 
-  import {SET_FULL_SCREEN} from "../../../store/mutations-types.js";
+  import {SET_FULL_SCREEN, SET_PLAYING_STATE, SET_CURRENT_INDEX} from "../../../store/mutations-types.js";
+
+  import ProgressBar from "../../common/progress-bar/progress-bar.vue";
+
+  import {prefixStyle} from "../../../common/js/dom.js";
 
   import animations from "create-keyframe-animation";
 
+  const transition = prefixStyle("transition");
+  const transform = prefixStyle("transform");
+  const animation = prefixStyle("animation");
+
   export default {
     name: "player",
+    data() {
+      return {
+        songReady: false,
+        currentTime: 0
+      }
+    },
     computed: {
+      normalPlayIcon() {
+        return this.playing ? "icon-pause" : "icon-play";
+      },
+      miniPlayIcon() {
+        return this.playing ? "icon-pause-mini" : "icon-play-mini";
+      },
+      cdClass() {
+        return this.playing ? "play" : "play pause";
+      },
+      disableCls() {
+        return this.songReady ? "" : "disable";
+      },
+      percent() {  // 计算歌曲当前播放时间占总时间的百分比
+        return this.currentTime / this.currentSong.duration;
+      },
       ...mapGetters([
         "playList",
         "fullScreen",
-        "currentSong"
+        "currentSong",
+        "playing",
+        "currentIndex"
       ])
     },
     methods: {
-      back() {
-        this.setFullScreen(false);
+      back() {  // 隐藏全屏播放器  打开mini播放器
+        this.setFullScreen(false);  // 由vuex中的数据进行控制
       },
-      open() {
+      open() {  // 打开全屏播放器  隐藏mini播放器
         this.setFullScreen(true);
       },
-      enter(el, done) {
+      enter(el, done) {  // 执行cd进入动画
         const {x, y, scale} = this._getPosAndScale();
 
         let animation = {
@@ -108,26 +148,26 @@
           }
         });
 
-        animations.runAnimation(this.$refs.cdWrapper, "move", done)
+        animations.runAnimation(this.$refs.cdWrapper, "move", done);
 
       },
       afterEnter() {
         animations.unregisterAnimation("move");
-        this.$refs.cdWrapper.style.animation = "";
+        this.$refs.cdWrapper.style[animation] = "";
       },
       leave(el, done) {  // 注意！！！ done是一个函数 该函数必须在当前次动画结束后调用 如果调用过早 那么动画不会执行 如果不调用 那么后面的afterLeave函数不会执行
         const {x, y, scale} = this._getPosAndScale();
 
-        this.$refs.cdWrapper.style.transition = "all 200ms";
-        this.$refs.cdWrapper.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+        this.$refs.cdWrapper.style[transition] = "all 200ms";
+        this.$refs.cdWrapper.style[transform] = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
 
         this.$refs.cdWrapper.addEventListener("transitionend", done);
       },
       afterLeave() {
-        this.$refs.cdWrapper.style.transition = "none";
-        this.$refs.cdWrapper.style.transform = "none";
+        this.$refs.cdWrapper.style[transition] = "none";
+        this.$refs.cdWrapper.style[transform] = "none";
       },
-      _getPosAndScale() {
+      _getPosAndScale() {  // 获取cd移动到的目标位置的方法 因为屏幕大小可能不一致 所以这里使用js来进行计算  移动的基准是cd的中心点
         const targetWidth = 40;
         const paddingLeft = 40;
         const paddingBottom = 30;
@@ -144,9 +184,84 @@
         }
 
       },
+      togglePlaying() {
+        if(!this.songReady) return;
+        this.setPlayingState(!this.playing);
+      },
+      prev() {
+        if(!this.songReady) return;  // 判断 只有当 当前歌曲可以播放时才可以点击上一首或者下一首 可以避免错误
+        let index = this.currentIndex - 1;
+        if(index === -1) {
+          index = this.playList.length - 1;
+        }
+        this.setCurrentIndex(index);
+        if(this.playing === false) this.togglePlaying();
+        this.songReady = false;
+      },
+      next() {
+        if(!this.songReady) return;
+        let index = this.currentIndex + 1;
+        if(index === this.playList.length) {
+          index = 0;
+        }
+        this.setCurrentIndex(index);
+        if(this.playing === false) this.togglePlaying();
+        this.songReady = false;
+      },
+      ready() {  // 当歌曲可以播放时触发
+        this.songReady = true;
+      },
+      error() {  // 当歌曲播放错误时触发
+        this.songReady = true;
+      },
+      updateTime(e) {  // 当音乐播放时间发生改变时触发
+        this.currentTime = e.target.currentTime;
+      },
+      formatTime(interval) {  // 格式化播放时间的方法
+        interval = interval | 0;
+        const minute = interval / 60 | 0;
+        const second = this._pad(interval % 60);
+
+        return `${minute}:${second}`;
+
+      },
+      _pad(num, n = 2) {  // 为传入的数字前面补0的方法 当传入的num的长度小于传入的n的数值时 在num前面补一个0 直到补过0的num的长度等于传入的n的数值时停止 返回num
+        let len = num.toString().length;
+
+        while(len < n) {
+          num = "0" + num;
+          len++;
+        }
+
+        return num;
+      },
+      percentChange(percent) {
+        const currentTime = this.currentSong.duration * percent;
+        this.$refs.audio.currentTime = currentTime;
+        if(this.playing === false) this.togglePlaying();
+      },
       ...mapMutations({
-        "setFullScreen": SET_FULL_SCREEN
+        "setFullScreen": SET_FULL_SCREEN,
+        "setPlayingState": SET_PLAYING_STATE,
+        "setCurrentIndex": SET_CURRENT_INDEX
       })
+    },
+    watch: {
+      currentSong() {
+        this.$nextTick(_ => {
+          this.$refs.audio.play();
+        })
+      },
+      playing(newPlaying) {
+        const audio = this.$refs.audio;
+        this.$nextTick(_ => {
+          newPlaying ? audio.play() : audio.pause();
+        })
+
+      }
+    },
+    components: {
+      ProgressBar
     }
   }
 </script>
