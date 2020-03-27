@@ -12,16 +12,27 @@
           <h1 class="title" v-html="currentSong.name"></h1>
           <h2 class="subtitle" v-html="currentSong.singer"></h2>
         </div>
-        <div class="middle">
-          <div class="middle-l">
+        <div class="middle" @touchstart.prevent="middleTouchStart" @touchmove.prevent="middleTouchMove" @touchend="middleTouchEnd">
+          <div class="middle-l" ref="middleL">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd" :class="cdClass">
                 <img class="image" :src="currentSong.image">
               </div>
             </div>
           </div>
+          <scroll class="middle-r" ref="lyricList" :data="currentLyric && currentLyric.lines">
+            <div class="lyric-wrapper">
+              <div v-if="currentLyric">
+                <p ref="lyricLine" class="text" :class="{current: currentLineNum === index}" v-for="(line, index) in currentLyric.lines">{{line.txt}}</p>
+              </div>
+            </div>
+          </scroll>
         </div>
         <div class="bottom">
+          <div class="dot-wrapper">
+            <span class="dot" :class="{active: currentShow === 'cd'}"></span>
+            <span class="dot" :class="{active: currentShow === 'lyric'}"></span>
+          </div>
           <div class="progress-wrapper">
             <span class="time time-l">{{formatTime(currentTime)}}</span>
             <div class="progress-bar-wrapper">
@@ -31,7 +42,7 @@
           </div>
           <div class="operators">
             <div class="icon i-left">
-              <i class="icon-sequence"></i>
+              <i :class="iconMode" @click="changeMode"></i>
             </div>
             <div class="icon i-left" :class="disableCls">
               <i class="icon-prev" @click="prev"></i>
@@ -59,29 +70,37 @@
           <p class="desc" v-html="currentSong.singer"></p>
         </div>
         <div class="control">
-          <i :class="miniPlayIcon" @click.stop="togglePlaying"></i>
+          <progress-circle :radius="32" :percent="percent">
+            <i :class="miniPlayIcon" @click.stop="togglePlaying" class="icon-mini"></i>
+          </progress-circle>
         </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
-    <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime"></audio>
+    <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
   </div>
 </template>
 
 <script>
   import {mapGetters, mapMutations} from "vuex";
 
-  import {SET_FULL_SCREEN, SET_PLAYING_STATE, SET_CURRENT_INDEX} from "../../../store/mutations-types.js";
+  import {SET_FULL_SCREEN, SET_PLAYING_STATE, SET_CURRENT_INDEX, SET_PLAY_MODE, SET_PLAYLIST} from "../../../store/mutations-types.js";
+  import {playMode} from "../../../common/js/config.js";
 
   import ProgressBar from "../../common/progress-bar/progress-bar.vue";
+  import ProgressCircle from "../../common/progress-circle/progress-circle.vue";
+  import Scroll from "../../common/scroll/scroll.vue";
 
   import {prefixStyle} from "../../../common/js/dom.js";
+  import {shuffle} from "../../../common/js/utils.js";
 
   import animations from "create-keyframe-animation";
+  import Lyric from "lyric-parser";
 
   const transition = prefixStyle("transition");
+  const transitionDuration = prefixStyle("transitionDuration");
   const transform = prefixStyle("transform");
   const animation = prefixStyle("animation");
 
@@ -90,8 +109,14 @@
     data() {
       return {
         songReady: false,
-        currentTime: 0
+        currentTime: 0,
+        currentLyric: null,
+        currentLineNum: 0,
+        currentShow: "cd"
       }
+    },
+    created() {
+      this.touch = {};
     },
     computed: {
       normalPlayIcon() {
@@ -102,6 +127,9 @@
       },
       cdClass() {
         return this.playing ? "play" : "play pause";
+      },
+      iconMode() {
+        return this.mode === playMode.sequence ? "icon-sequence" : this.mode === playMode.loop ? "icon-loop" : "icon-random";
       },
       disableCls() {
         return this.songReady ? "" : "disable";
@@ -114,7 +142,9 @@
         "fullScreen",
         "currentSong",
         "playing",
-        "currentIndex"
+        "currentIndex",
+        "mode",
+        "sequenceList"
       ])
     },
     methods: {
@@ -205,14 +235,25 @@
           index = 0;
         }
         this.setCurrentIndex(index);
-        if(this.playing === false) this.togglePlaying();
+        if(this.playing === false) this.togglePlaying();  // 如果当前播放状态为false 那么就调用切换播放状态的方法 让播放状态为true
         this.songReady = false;
+      },
+      loop() {
+        this.currentTime = 0;
+        this.$refs.audio.play();
       },
       ready() {  // 当歌曲可以播放时触发
         this.songReady = true;
       },
       error() {  // 当歌曲播放错误时触发
         this.songReady = true;
+      },
+      ended() {  // 当歌曲播放完毕后触发
+        if(this.mode === playMode.loop) {
+          this.loop();
+        }else {
+          this.next();
+        }
       },
       updateTime(e) {  // 当音乐播放时间发生改变时触发
         this.currentTime = e.target.currentTime;
@@ -235,21 +276,114 @@
 
         return num;
       },
-      percentChange(percent) {
+      percentChange(percent) {  // 当进度条发生拖拽和点击时 进度条组件向外导出的函数 包含当前进度条的进度
         const currentTime = this.currentSong.duration * percent;
         this.$refs.audio.currentTime = currentTime;
         if(this.playing === false) this.togglePlaying();
       },
+      changeMode() {  // 切换播放模式的方法
+        const mode = (this.mode + 1) % 3;  // 播放模式为0 || 1 || 2
+        this.setPlayMode(mode);  // 调用vuex中的方法修改当前的播放模式
+        let list = null;  // 创建一个用来存数组的变量
+        if(mode === playMode.random) {  // 判断当前设置的播放模式如果是随机播放
+          list = shuffle(this.sequenceList);  // 那么就要对顺序播放的数组进行洗牌 达到随机播放的效果  但是这里需要注意 shuffle方法内部会对传入的数组进行修改 但是这里传入的顺序播放数组是不可以被修改顺序的 所以这里使用数组展开放进另一个数组中的方法 实现浅拷贝 来达到目的
+        }else {
+          list = this.sequenceList;
+        }
+        this.resultCurrentIndex(list, this.currentSong);
+        this.setPlayList(list);
+      },
+      resultCurrentIndex(list, currentSong) {  // 该方法用于获取当前正在播放的歌曲在最新的播放列表中的索引 得到索引后将索引设置到vuex的state中  该方法的作用是用于解决当播放列表顺序发生变化但是索引没发生变化 造成修改播放列表之后 正在播放的歌曲发生跳转的问题
+        let index = list.findIndex(item => item.id === currentSong.id);
+        this.setCurrentIndex(index);
+      },
+      getLyric() {
+        this.currentSong.getLyric().then(lyric => {  // 调用当前歌曲实例对象中的方法 获取对应当前歌曲的歌词 方法返回promise
+          this.currentLyric = new Lyric(lyric, this.handleLyric);  // 使用lyric-parser插件 传入已经转化为汉字的歌词 第二个参数是一个回调函数
+          if(this.playing) {
+            this.currentLyric.play();  // 当调用这个play方法开始 就会不停的在时间对应歌词时间时触发传入的handleLyric回调函数
+          }
+          console.log(this.currentLyric);
+        }).catch(err => {
+          console.log(err);
+        })
+      },
+      handleLyric({lineNum, txt}) {  // 该函数在播放到对应歌词的位置就会回调一次  lineNum: 当前播放到的歌词的行数  txt: 当前播放到的歌词的内容
+        this.currentLineNum = lineNum;
+        if(lineNum > 5) {
+          let lineEl = this.$refs.lyricLine[lineNum - 5];
+          this.$refs.lyricList.scrollToElement(lineEl, 1000);
+        }else {
+          this.$refs.lyricList.scrollTo(0, 0, 1000);
+        }
+      },
+      middleTouchStart(e) {
+        this.touch.initiated = true;
+        const touches = e.touches[0];
+        this.touch.startX = touches.pageX;
+        this.touch.startY = touches.pageY;
+        this.$refs.lyricList.$el.style[transitionDuration] = "0ms";
+        this.$refs.middleL.style[transitionDuration] = "0ms";
+      },
+      middleTouchMove(e) {
+        if(!this.touch.initiated) return;
+        let left = this.currentShow === "cd" ? 0 : -window.innerWidth;
+        const touches = e.touches[0];
+        const moveX = touches.pageX;
+        const moveY = touches.pageY;
+        const diffX = moveX - this.touch.startX;
+        const diffY = moveY - this.touch.startY;
+        if(Math.abs(diffY) > Math.abs(diffX)) return;
+        const move = Math.min(0, Math.max(-window.innerWidth, left + diffX));
+        this.touch.percent = Math.abs(move / window.innerWidth);
+        this.$refs.lyricList.$el.style[transform] = `translate3d(${move}px, 0, 0)`;
+        this.$refs.middleL.style.opacity = 1 - this.touch.percent;
+      },
+      middleTouchEnd() {
+        let left = 0;
+        let opacity = undefined;
+        if(this.currentShow === "cd") {
+          if(this.touch.percent > 0.2) {
+            left = -window.innerWidth;
+            opacity = 0;
+            this.currentShow = "lyric";
+          }else {
+            left = 0;
+            opacity = 1;
+          }
+        } else{
+          if(this.touch.percent < 0.8) {
+            left = 0;
+            opacity = 1;
+            this.currentShow = "cd";
+          }else {
+            opacity = 0;
+            left = -window.innerWidth;
+          }
+        }
+        this.$refs.lyricList.$el.style[transitionDuration] = "300ms";
+        this.$refs.middleL.style[transitionDuration] = "300ms";
+        this.$refs.lyricList.$el.style[transform] = `translate3d(${left}px, 0, 0)`;
+        this.$refs.middleL.style.opacity = opacity;
+        this.touch.initiated = false;
+        this.touch.percent = undefined;
+      },
       ...mapMutations({
         "setFullScreen": SET_FULL_SCREEN,
         "setPlayingState": SET_PLAYING_STATE,
-        "setCurrentIndex": SET_CURRENT_INDEX
+        "setCurrentIndex": SET_CURRENT_INDEX,
+        "setPlayMode": SET_PLAY_MODE,
+        "setPlayList": SET_PLAYLIST
       })
     },
     watch: {
-      currentSong() {
+      currentSong(newSong, oldSong) {  // 当vuex中的getters中根据当前播放列表和当前索引映射出来的当前播放歌曲的数据发生变化时会触发
+        if(newSong.id === oldSong.id) {  // 判断如果当前返回的需要播放的歌曲和切换歌曲之前播放的歌曲的数据一致 那么就不执行下面的代码  用于解决切换播放模式后当前播放歌曲没有发生变化 但是会让歌曲播放的问题
+          return;
+        }
         this.$nextTick(_ => {
           this.$refs.audio.play();
+          this.getLyric();
         })
       },
       playing(newPlaying) {
@@ -261,7 +395,9 @@
       }
     },
     components: {
-      ProgressBar
+      ProgressBar,
+      ProgressCircle,
+      Scroll
     }
   }
 </script>

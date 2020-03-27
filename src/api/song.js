@@ -1,7 +1,6 @@
-import {commonParams, options} from "./config.js";
+import {commonParams} from "./config.js";
 
 import {request} from "../common/js/request.js";
-import jsonp from "../common/js/jsonp";
 
 export function getMusicSource(songs) {
   const url = "/api/getSongVkey";
@@ -62,14 +61,33 @@ export function getMusicSource(songs) {
 }
 
 let _uid = '';
-
-export function getUid () {
-  if (_uid) {
+export function getUid() {
+  if(_uid) {
     return _uid;
   }
-  if (!_uid) {
+  if(!_uid) {
     const t = (new Date()).getUTCMilliseconds();
     _uid = '' + Math.round(2147483647 * Math.random()) * t % 1e10;
   }
   return _uid;
+}
+
+export function getLyric(mid) {
+  const url = "/api/lyric";
+
+  const data = Object.assign({}, commonParams, {
+    songmid: mid,
+    pcachetime: +new Date(),
+    platform: "yqq",
+    hostUin: 0,
+    needNewCode: 0,
+    g_tk: 67232076,
+    format: "json"
+  });
+
+  return request({
+    url,
+    params: data
+  });
+
 }

@@ -39,14 +39,17 @@
         this.touch.diff = e.touches[0].pageX - this.touch.startX;
         let offsetWidth = Math.min(barWidth, Math.max(0, this.touch.progressWidth + this.touch.diff));
         this._offset(offsetWidth);
-
       },
       progressTouchEnd(e) {
         this.touch.initiated = false;
         this._triggerPercent();
       },
       barClick(e) {  // 点击进度条盒子时实现切换播放时间
-        this._offset(e.offsetX);
+        let clickX = e.pageX;
+        let barX = this.$refs.progressBar.offsetLeft;
+        let offsetWidth = clickX - barX;
+        this._offset(offsetWidth);
+
         this._triggerPercent();
       },
       _triggerPercent() {  // 根据当前进度条的宽度和进度条盒子宽度 算出当前进度的百分比 并传递到父元素中

@@ -38,7 +38,7 @@
       this._getSingerDetail();
     },
     methods: {
-      _getSingerDetail() {  // 根据路由中的歌手id 获取歌手的详细数据 数据中包含歌手的所有音乐的详细信息 但是没有播放地址
+      _getSingerDetail() {  // 根据vuex中的歌手id 获取歌手的详细数据 数据中包含歌手的所有音乐的详细信息 但是没有播放地址
         const singerId = this.singer.id;
         if(!singerId) this.$router.push("/singer");
         getSingerDetail(singerId).then(res => {
