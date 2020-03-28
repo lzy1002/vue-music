@@ -44,7 +44,18 @@ module.exports = {
           referer: "https://c.y.qq.com/",
           host: "c.y.qq.com"
         }
-
+      },
+      "/api/getSongList": {
+        target: "https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg",
+        secure: false,
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/getSongList": ""
+        },
+        headers: {
+          referer: "https://c.y.qq.com/",
+          host: "c.y.qq.com"
+        }
       }
     }
   }

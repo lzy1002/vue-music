@@ -1,5 +1,5 @@
 <template>
-  <div class="recommend">
+  <div class="recommend" ref="recommend">
     <scroll :data="discList" class="recommend-content" ref="scroll">
       <div>
         <div class="slider-wrapper">
@@ -15,7 +15,7 @@
         <div class="recommend-list">
           <h1 class="list-title">热门歌单推荐</h1>
           <ul>
-            <li class="item" v-for="item in discList">
+            <li class="item" @click="selectItem(item)" v-for="item in discList">
               <div class="icon">
                 <img width="60" height="60" v-lazy="item.imgurl" alt="">
               </div>
@@ -31,18 +31,28 @@
         <loading></loading>
       </div>
     </scroll>
+    <transition name="move">
+      <router-view></router-view>
+    </transition>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
+  import {mapMutations} from "vuex";
+  import {SET_DISC} from "../../store/mutations-types.js";
+
   import {getRecommend, getDiscList} from "../../api/recommend.js";
   import {ERR_OK} from "../../api/config.js";
+
+  import {playListMixin} from "../../common/js/mixin.js";
 
   import Slider from "../../components/common/slider/slider.vue";
   import Scroll from "../../components/common/scroll/scroll.vue";
   import Loading from "../../components/common/loading/loading.vue";
 
   export default {
+    name: "recommend",
+    mixins: [playListMixin],
     data() {
       return {
         recommends: [],
@@ -61,6 +71,7 @@
         getDiscList().then(res => {
           if(res.data.code === ERR_OK) {
             this.discList = res.data.data.list;
+            console.log(this.discList);
           }
         })
       },
@@ -69,7 +80,21 @@
           this.$refs.scroll.refresh();
           this.checkLoaded = true;
         }
-      }
+      },
+      handlePlayList(playList) {
+        const bottom = playList.length > 0 ? "60px" : "";
+        this.$refs.recommend.style.bottom = bottom;
+        this.$refs.scroll.refresh();
+      },
+      selectItem(item) {
+        this.setDisc(item);
+        this.$router.push({
+          path: `/recommend/${item.dissid}`
+        });
+      },
+      ...mapMutations({
+        setDisc: SET_DISC
+      })
     },
     components: {
       Slider,
@@ -85,6 +110,11 @@
 
 <style lang="stylus" scoped>
   @import "~common/stylus/variable"
+
+  .move-enter-active, .move-leave-active
+    transition all 500ms ease
+  .move-enter, .move-leave-to
+    transform translateX(100%)
 
   .recommend
     position: fixed

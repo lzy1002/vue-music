@@ -1,6 +1,6 @@
 <template>
-  <div class="singer">
-    <list-view :data="singers" @selectItem="selectSinger"></list-view>
+  <div class="singer" ref="singer">
+    <list-view :data="singers" @selectItem="selectSinger" ref="list"></list-view>
 
     <transition name="move">
       <router-view></router-view>
@@ -14,6 +14,8 @@
 
   import {getSingerList} from "../../api/singer.js";
 
+  import {playListMixin} from "../../common/js/mixin.js";
+
   import {SET_SINGER} from "../../store/mutations-types.js";
   import {mapMutations} from "vuex";
 
@@ -24,6 +26,7 @@
 
   export default {
     name: "singer",
+    mixins: [playListMixin],
     data() {
       return {
         singers: [],
@@ -95,6 +98,11 @@
 
         return hot.concat(ret);
 
+      },
+      handlePlayList(playList) {
+        const bottom = playList.length > 0 ? "60px" : "";
+        this.$refs.singer.style.bottom = bottom;
+        this.$refs.list.refresh();
       },
       ...mapMutations({
         setSinger: SET_SINGER  // 把mutations中名为SET_SINGER的值的方法 映射到setSinger中 之后就可以使用setSinger来调用方法了

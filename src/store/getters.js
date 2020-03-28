@@ -15,3 +15,7 @@ export const currentIndex = state => state.currentIndex;
 export const currentSong = (state) => {  // 根据当前播放歌曲的索引从播放列表中取出对应索引的歌曲并返回
   return state.playList[state.currentIndex] || {};
 };
+
+export const disc = (state) => state.disc;
+
+export const topList = (state) => state.topList;

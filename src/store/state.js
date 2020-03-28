@@ -7,7 +7,9 @@ const state = {
   playList: [],  // 播放器的音乐列表
   sequenceList: [],  // 有顺序的音乐列表
   mode: playMode.sequence,  // 播放模式 顺序播放 循环播放 随机播放
-  currentIndex: -1  // 当前播放音乐在音乐列表中的索引
+  currentIndex: -1,  // 当前播放音乐在音乐列表中的索引
+  disc: {},
+  topList: {}
 
 };
 

@@ -84,6 +84,9 @@
       scroll(pos) {  // scroll组件导出的 监听滚动的方法 pos: 当前滚动到的x或y轴的位置
         this.scrollY = pos.y;
       },
+      refresh() {
+        this.$refs.listview.refresh();
+      },
       _scrollTo(index) {
         index = index < 0 ? 0 : index;
         index = index > this.data.length - 1 ? this.data.length - 1 : index;

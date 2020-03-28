@@ -19,6 +19,9 @@
                 <img class="image" :src="currentSong.image">
               </div>
             </div>
+            <div class="playing-lyric-wrapper">
+              <div class="playing-lyric">{{playingLyric}}</div>
+            </div>
           </div>
           <scroll class="middle-r" ref="lyricList" :data="currentLyric && currentLyric.lines">
             <div class="lyric-wrapper">
@@ -112,7 +115,8 @@
         currentTime: 0,
         currentLyric: null,
         currentLineNum: 0,
-        currentShow: "cd"
+        currentShow: "cd",
+        playingLyric: ""
       }
     },
     created() {
@@ -217,30 +221,44 @@
       togglePlaying() {
         if(!this.songReady) return;
         this.setPlayingState(!this.playing);
+        if(this.currentLyric) {
+          this.currentLyric.togglePlay();  // 当点击切换播放状态的按钮时 也要切换歌词的滚动状态
+        }
       },
       prev() {
         if(!this.songReady) return;  // 判断 只有当 当前歌曲可以播放时才可以点击上一首或者下一首 可以避免错误
-        let index = this.currentIndex - 1;
-        if(index === -1) {
-          index = this.playList.length - 1;
+        if(this.playList.length === 1) {
+          this.loop();
+        }else {
+          let index = this.currentIndex - 1;
+          if (index === -1) {
+            index = this.playList.length - 1;
+          }
+          this.setCurrentIndex(index);
+          if (this.playing === false) this.togglePlaying();
         }
-        this.setCurrentIndex(index);
-        if(this.playing === false) this.togglePlaying();
         this.songReady = false;
       },
       next() {
         if(!this.songReady) return;
-        let index = this.currentIndex + 1;
-        if(index === this.playList.length) {
-          index = 0;
+        if(this.playList.length === 1) {
+          this.loop();
+        }else {
+          let index = this.currentIndex + 1;
+          if (index === this.playList.length) {
+            index = 0;
+          }
+          this.setCurrentIndex(index);
+          if (this.playing === false) this.togglePlaying();  // 如果当前播放状态为false 那么就调用切换播放状态的方法 让播放状态为true
         }
-        this.setCurrentIndex(index);
-        if(this.playing === false) this.togglePlaying();  // 如果当前播放状态为false 那么就调用切换播放状态的方法 让播放状态为true
         this.songReady = false;
       },
       loop() {
         this.currentTime = 0;
         this.$refs.audio.play();
+        if(this.currentLyric) {
+          this.currentLyric.seek(0);  // 当歌曲需要单曲循环并播放完毕后 调用该方法 让歌词回调顶部
+        }
       },
       ready() {  // 当歌曲可以播放时触发
         this.songReady = true;
@@ -280,6 +298,9 @@
         const currentTime = this.currentSong.duration * percent;
         this.$refs.audio.currentTime = currentTime;
         if(this.playing === false) this.togglePlaying();
+        if(this.currentLyric) {
+          this.currentLyric.seek(currentTime * 1000);  // 当拖拽进度条或点击进度条时调用该方法 传入对应当前进度条位置的毫秒时间 那么插件就会调用handleLyric这个回调函数 并将对应当前时间的歌词的行数传入
+        }
       },
       changeMode() {  // 切换播放模式的方法
         const mode = (this.mode + 1) % 3;  // 播放模式为0 || 1 || 2
@@ -305,11 +326,14 @@
           }
           console.log(this.currentLyric);
         }).catch(err => {
-          console.log(err);
+          this.currentLyric = null;
+          this.currentLineNum = 0;
+          this.playingLyric = "";
         })
       },
       handleLyric({lineNum, txt}) {  // 该函数在播放到对应歌词的位置就会回调一次  lineNum: 当前播放到的歌词的行数  txt: 当前播放到的歌词的内容
         this.currentLineNum = lineNum;
+        this.playingLyric = txt;
         if(lineNum > 5) {
           let lineEl = this.$refs.lyricLine[lineNum - 5];
           this.$refs.lyricList.scrollToElement(lineEl, 1000);
@@ -381,10 +405,14 @@
         if(newSong.id === oldSong.id) {  // 判断如果当前返回的需要播放的歌曲和切换歌曲之前播放的歌曲的数据一致 那么就不执行下面的代码  用于解决切换播放模式后当前播放歌曲没有发生变化 但是会让歌曲播放的问题
           return;
         }
+        if(this.currentLyric) {  // 在切换播放歌曲的时候 判断之前有没有lyric-parser插件的实例 如果有 那么就清除上一次的实例 也就是清除了插件上一次创建的定时器 解决了切换歌曲后存在多个定时器导致歌词位置不正确的问题
+          this.currentLyric.stop();
+          this.currentLineNum = 0;  // 当切换歌曲后 让高亮的歌词行数变为0
+        }
         this.$nextTick(_ => {
           this.$refs.audio.play();
           this.getLyric();
-        })
+        }, 1000);
       },
       playing(newPlaying) {
         const audio = this.$refs.audio;
