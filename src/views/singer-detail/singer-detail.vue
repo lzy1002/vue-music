@@ -40,7 +40,7 @@
     methods: {
       _getSingerDetail() {  // 根据vuex中的歌手id 获取歌手的详细数据 数据中包含歌手的所有音乐的详细信息 但是没有播放地址
         const singerId = this.singer.id;
-        if(!singerId) this.$router.push("/singer");
+        if(!singerId) this.$router.back();
         getSingerDetail(singerId).then(res => {
           if(res.code === ERR_OK) {
             let songs = this._normalizeSong(res.data.list);  // 调用格式化歌曲数据的方法 把获取到的当前歌手的所有音乐数据传入 返回包含多个对象的数组 对象中是已经格式化好的音乐数据

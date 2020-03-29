@@ -56,6 +56,18 @@ module.exports = {
           referer: "https://c.y.qq.com/",
           host: "c.y.qq.com"
         }
+      },
+      "/api/search": {
+        target: "https://c.y.qq.com/soso/fcgi-bin/search_for_qq_cp",
+        secure: false,
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api/search": ""
+        },
+        headers: {
+          referer: "https://c.y.qq.com/",
+          host: "c.y.qq.com"
+        }
       }
     }
   }

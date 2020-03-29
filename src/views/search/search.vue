@@ -1,9 +1,9 @@
 <template>
   <div class="search">
     <div class="search-box-wrapper">
-      <search-box ref="searchBox"></search-box>
+      <search-box ref="searchBox" @query="search"></search-box>
     </div>
-    <div class="shortcut-wrapper">
+    <div class="shortcut-wrapper" v-show="!query">
       <div class="shortcut">
         <div class="hot-key">
           <h1 class="title">热门搜索</h1>
@@ -15,11 +15,19 @@
         </div>
       </div>
     </div>
+    <div v-show="query" class="search-result">
+      <suggest :query="query" :show-singer="showSinger"></suggest>
+    </div>
+
+    <transition name="move">
+      <router-view></router-view>
+    </transition>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
   import SearchBox from "../../components/content/search-box/search-box.vue";
+  import Suggest from "../../components/content/suggest/suggest.vue";
 
   import {getHotKey} from "../../api/search.js";
 
@@ -29,11 +37,14 @@
     name: "search",
     data() {
       return {
-        hotKey: []
+        hotKey: [],
+        query: "",
+        showSinger: true
       }
     },
     components: {
-      SearchBox
+      SearchBox,
+      Suggest
     },
     created() {
       this._getHotKey();
@@ -49,6 +60,9 @@
       },
       addQuery(query) {
         this.$refs.searchBox.setQuery(query);
+      },
+      search(query) {
+        this.query = query;
       }
     }
   }
@@ -57,6 +71,11 @@
 <style lang="stylus" rel="stylesheet/stylus">
   @import "~common/stylus/variable"
   @import "~common/stylus/mixin"
+
+  .move-enter-active, .move-leave-active
+    transition all 500ms ease
+  .move-enter, .move-leave-to
+    transform translateX(100%)
 
   .search
     .search-box-wrapper

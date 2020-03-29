@@ -17,7 +17,7 @@ export const selectPlay = function ({commit, state}, {list, index}) {  // 用于
   commit(types.SET_PLAYING_STATE, true);
 };
 
-export const randomPlay = function ({commit}, {list}) {
+export const randomPlay = function ({commit}, {list}) {  // 处理点击列表随机播放
   commit(types.SET_SEQUENCE_LIST, list);
   let randomList = shuffle(list);
   commit(types.SET_PLAYLIST, randomList);
@@ -25,4 +25,51 @@ export const randomPlay = function ({commit}, {list}) {
   commit(types.SET_CURRENT_INDEX, 0);
   commit(types.SET_FULL_SCREEN, true);
   commit(types.SET_PLAYING_STATE, true);
+};
+
+export const insertSong = function ({commit, state}, song) {  // 处理搜索页面点击歌曲时的业务
+  let playList = state.playList.slice();
+  let sequenceList = state.sequenceList.slice();
+  let currentIndex = state.currentIndex;
+
+  const currentSong = playList[currentIndex];  // 当前正在播放的歌曲
+
+  const fpIndex = playList.findIndex(item => item.id === song.id);  // 查看当前播放列表中是否存在当前传入的歌曲
+
+  currentIndex++;
+
+  playList.splice(currentIndex, 0, song);
+
+  if(fpIndex > -1) {
+    if(currentIndex > fpIndex) {
+      playList.splice(fpIndex, 1);
+      currentIndex--;
+    }else {
+      playList.splice(fpIndex + 1, 1);
+    }
+  }
+
+
+  let currentSIndex = sequenceList.findIndex(item => item.id === currentSong.id);
+
+  let fsIndex = sequenceList.findIndex(item => item.id === song.id);
+
+  currentSIndex++;
+
+  sequenceList.splice(currentSIndex, 0, song);
+
+  if(fsIndex > -1) {
+    if(currentSIndex > fsIndex) {
+      sequenceList.splice(fsIndex, 1);
+    }else {
+      sequenceList.splice(fsIndex + 1, 1);
+    }
+  }
+
+  commit(types.SET_PLAYLIST, playList);
+  commit(types.SET_SEQUENCE_LIST, sequenceList);
+  commit(types.SET_CURRENT_INDEX, currentIndex);
+  commit(types.SET_FULL_SCREEN, true);
+  commit(types.SET_PLAYING_STATE, true);
+
 };

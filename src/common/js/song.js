@@ -46,7 +46,7 @@ export function createSong(musicData) {
   })
 }
 
-function filterSinger(singerArr) {
+export function filterSinger(singerArr) {
   let ret = [];
   if(!singerArr) return;
 

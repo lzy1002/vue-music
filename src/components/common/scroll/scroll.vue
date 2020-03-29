@@ -25,13 +25,18 @@
       listenScroll: {  // 是否监听插件滚动事件
         type: Boolean,
         default: false
+      },
+      pullUp: {
+        type: Boolean,
+        default: false
       }
     },
     methods: {
       _initScroll() {
         this.scroll = new BScroll(this.$refs.wrapper, {
           probeType: this.probeType,
-          click: this.click
+          click: this.click,
+          pullUpLoad: this.pullUp
         });
 
         if(this.listenScroll) {
@@ -39,6 +44,14 @@
             this.$emit("scroll", pos);
           })
         }
+
+        if(this.pullUp) {
+          this.scroll.on("pullingUp", _ => {
+            this.$emit("pullUpLoad");
+            this.scroll.finishPullUp();
+          })
+        }
+
       },
       enable() {
         this.scroll && this.scroll.enable();
