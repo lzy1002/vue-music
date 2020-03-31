@@ -12,3 +12,18 @@ export function shuffle(arr) {  // 洗牌算法  对数组进行乱序
   }
   return _arr;
 }
+
+export function deBounce(fn, delay) {
+  let timeId;
+
+  return function (...args) {
+    if(timeId) {
+      window.clearTimeout(timeId);
+    }
+
+    timeId = window.setTimeout(_ => {
+      fn.apply(this, args);
+    }, delay);
+
+  }
+}

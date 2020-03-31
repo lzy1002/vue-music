@@ -78,10 +78,11 @@
           </progress-circle>
         </div>
         <div class="control">
-          <i class="icon-playlist"></i>
+          <i class="icon-playlist" @click.stop="showPlayList"></i>
         </div>
       </div>
     </transition>
+    <play-list ref="playList"></play-list>
     <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
   </div>
 </template>
@@ -95,6 +96,7 @@
   import ProgressBar from "../../common/progress-bar/progress-bar.vue";
   import ProgressCircle from "../../common/progress-circle/progress-circle.vue";
   import Scroll from "../../common/scroll/scroll.vue";
+  import PlayList from "../../content/playlist/playlist.vue";
 
   import {prefixStyle} from "../../../common/js/dom.js";
   import {shuffle} from "../../../common/js/utils.js";
@@ -392,6 +394,9 @@
         this.touch.initiated = false;
         this.touch.percent = undefined;
       },
+      showPlayList() {
+        this.$refs.playList.show();
+      },
       ...mapMutations({
         "setFullScreen": SET_FULL_SCREEN,
         "setPlayingState": SET_PLAYING_STATE,
@@ -402,6 +407,10 @@
     },
     watch: {
       currentSong(newSong, oldSong) {  // 当vuex中的getters中根据当前播放列表和当前索引映射出来的当前播放歌曲的数据发生变化时会触发
+        console.log(newSong.id, oldSong.id);
+        if(!newSong.id) {  // 解决当修改playList和currentIndex之后 newSong的值可能不正确导致可以通过下面的判断 去播放歌曲和获取歌词的错误
+          return;
+        }
         if(newSong.id === oldSong.id) {  // 判断如果当前返回的需要播放的歌曲和切换歌曲之前播放的歌曲的数据一致 那么就不执行下面的代码  用于解决切换播放模式后当前播放歌曲没有发生变化 但是会让歌曲播放的问题
           return;
         }
@@ -425,7 +434,8 @@
     components: {
       ProgressBar,
       ProgressCircle,
-      Scroll
+      Scroll,
+      PlayList
     }
   }
 </script>

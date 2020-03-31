@@ -29,6 +29,10 @@
       pullUp: {
         type: Boolean,
         default: false
+      },
+      beforeScroll: {
+        type: Boolean,
+        default: false
       }
     },
     methods: {
@@ -46,9 +50,15 @@
         }
 
         if(this.pullUp) {
-          this.scroll.on("pullingUp", _ => {
+          this.scroll.on("pullingUp", () => {  // 当可滚动区域到底时触发
             this.$emit("pullUpLoad");
             this.scroll.finishPullUp();
+          })
+        }
+
+        if(this.beforeScroll) {
+          this.scroll.on("beforeScrollStart", () => {  // 当BScroll控制区域开始滚动时触发
+            this.$emit("beforeStart");
           })
         }
 

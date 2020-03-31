@@ -19,3 +19,5 @@ export const currentSong = (state) => {  // 根据当前播放歌曲的索引从
 export const disc = (state) => state.disc;
 
 export const topList = (state) => state.topList;
+
+export const searchHistory = (state) => state.searchHistory;

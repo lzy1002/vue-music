@@ -1,5 +1,5 @@
 <template>
-  <Scroll class="suggest" :data="result" :pull-up="pullUp" @pullUpLoad="pullUpLoad" ref="suggest">
+  <Scroll class="suggest" :data="result" :pull-up="pullUp" @pullUpLoad="pullUpLoad" ref="suggest" :before-scroll="beforeScroll" @beforeScroll="listScroll">
     <ul class="suggest-list">
       <li class="suggest-item" @click="selectItem(item)" v-for="item in result">
         <div class="icon">
@@ -11,12 +11,16 @@
       </li>
       <loading v-show="hasMore" title=""></loading>
     </ul>
+    <div v-show="!hasMore && !result.length" class="no-result-wrapper">
+      <no-result title="抱歉, 暂无搜索结果"></no-result>
+    </div>
   </Scroll>
 </template>
 
 <script>
   import Scroll from "../../common/scroll/scroll.vue";
   import Loading from "../../common/loading/loading.vue";
+  import NoResult from "../../content/no-result/no-result.vue";
 
   import {mapMutations, mapActions} from "vuex";
   import {SET_SINGER} from "../../../store/mutations-types.js";
@@ -48,13 +52,15 @@
         page: 1,
         result: [],
         pullUp: true,
+        beforeScroll: true,
         hasMore: true,
         originArr: []
       }
     },
     components: {
       Scroll,
-      Loading
+      Loading,
+      NoResult
     },
     methods: {
       _search() {
@@ -135,8 +141,15 @@
           })
         }else {
           this.insertSong(item);
-
         }
+
+        this.$emit("select");
+      },
+      listScroll() {  // 列表刚开始滚动时触发
+        this.$emit("listScroll");
+      },
+      refresh() {
+        this.$refs.suggest.refresh();
       },
       ...mapMutations({
         setSinger: SET_SINGER
@@ -148,6 +161,7 @@
     watch: {
       query(newQuery) {
         this.originArr = [];
+        this.result = [];
         this.page = 1;
         this.$refs.suggest.scrollTo(0, 0);
         this._search(newQuery);
