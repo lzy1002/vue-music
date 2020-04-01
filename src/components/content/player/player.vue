@@ -88,7 +88,7 @@
 </template>
 
 <script>
-  import {mapGetters, mapMutations} from "vuex";
+  import {mapGetters, mapMutations, mapActions} from "vuex";
 
   import {SET_FULL_SCREEN, SET_PLAYING_STATE, SET_CURRENT_INDEX, SET_PLAY_MODE, SET_PLAYLIST} from "../../../store/mutations-types.js";
   import {playMode} from "../../../common/js/config.js";
@@ -99,10 +99,11 @@
   import PlayList from "../../content/playlist/playlist.vue";
 
   import {prefixStyle} from "../../../common/js/dom.js";
-  import {shuffle} from "../../../common/js/utils.js";
 
   import animations from "create-keyframe-animation";
   import Lyric from "lyric-parser";
+
+  import {playerMixin} from "../../../common/js/mixin.js";
 
   const transition = prefixStyle("transition");
   const transitionDuration = prefixStyle("transitionDuration");
@@ -111,6 +112,7 @@
 
   export default {
     name: "player",
+    mixins: [playerMixin],
     data() {
       return {
         songReady: false,
@@ -133,9 +135,6 @@
       },
       cdClass() {
         return this.playing ? "play" : "play pause";
-      },
-      iconMode() {
-        return this.mode === playMode.sequence ? "icon-sequence" : this.mode === playMode.loop ? "icon-loop" : "icon-random";
       },
       disableCls() {
         return this.songReady ? "" : "disable";
@@ -264,6 +263,7 @@
       },
       ready() {  // 当歌曲可以播放时触发
         this.songReady = true;
+        this.savePlayHistory(this.currentSong);  // 每当歌曲可以播放时 调用actions中的方法 将当前歌曲存储到本地存储中和state中
       },
       error() {  // 当歌曲播放错误时触发
         this.songReady = true;
@@ -303,22 +303,6 @@
         if(this.currentLyric) {
           this.currentLyric.seek(currentTime * 1000);  // 当拖拽进度条或点击进度条时调用该方法 传入对应当前进度条位置的毫秒时间 那么插件就会调用handleLyric这个回调函数 并将对应当前时间的歌词的行数传入
         }
-      },
-      changeMode() {  // 切换播放模式的方法
-        const mode = (this.mode + 1) % 3;  // 播放模式为0 || 1 || 2
-        this.setPlayMode(mode);  // 调用vuex中的方法修改当前的播放模式
-        let list = null;  // 创建一个用来存数组的变量
-        if(mode === playMode.random) {  // 判断当前设置的播放模式如果是随机播放
-          list = shuffle(this.sequenceList);  // 那么就要对顺序播放的数组进行洗牌 达到随机播放的效果  但是这里需要注意 shuffle方法内部会对传入的数组进行修改 但是这里传入的顺序播放数组是不可以被修改顺序的 所以这里使用数组展开放进另一个数组中的方法 实现浅拷贝 来达到目的
-        }else {
-          list = this.sequenceList;
-        }
-        this.resultCurrentIndex(list, this.currentSong);
-        this.setPlayList(list);
-      },
-      resultCurrentIndex(list, currentSong) {  // 该方法用于获取当前正在播放的歌曲在最新的播放列表中的索引 得到索引后将索引设置到vuex的state中  该方法的作用是用于解决当播放列表顺序发生变化但是索引没发生变化 造成修改播放列表之后 正在播放的歌曲发生跳转的问题
-        let index = list.findIndex(item => item.id === currentSong.id);
-        this.setCurrentIndex(index);
       },
       getLyric() {
         this.currentSong.getLyric().then(lyric => {  // 调用当前歌曲实例对象中的方法 获取对应当前歌曲的歌词 方法返回promise
@@ -403,7 +387,10 @@
         "setCurrentIndex": SET_CURRENT_INDEX,
         "setPlayMode": SET_PLAY_MODE,
         "setPlayList": SET_PLAYLIST
-      })
+      }),
+      ...mapActions([
+        "savePlayHistory"
+      ])
     },
     watch: {
       currentSong(newSong, oldSong) {  // 当vuex中的getters中根据当前播放列表和当前索引映射出来的当前播放歌曲的数据发生变化时会触发

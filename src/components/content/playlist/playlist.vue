@@ -4,14 +4,14 @@
       <div class="list-wrapper" @click.stop>
         <div class="list-header">
           <h1 class="title">
-            <i class="icon"></i>
-            <span class="text"></span>
-            <span class="clear"><i class="icon-clear"></i></span>
+            <i class="icon" @click="changeMode" :class="iconMode"></i>
+            <span class="text">{{modeText}}</span>
+            <span class="clear" @click="showConfirm"><i class="icon-clear"></i></span>
           </h1>
         </div>
-        <scroll class="list-content" ref="listContent">
-          <ul>
-            <li ref="listItem" class="item" v-for="(item, index) in sequenceList" @click="selectItem(item, index)">
+        <scroll class="list-content" ref="listContent" :delayRefresh="delayRefresh">
+          <transition-group name="list" tag="ul">
+            <li :key="item.id" ref="listItem" class="item" v-for="(item, index) in sequenceList" @click="selectItem(item, index)">
               <i class="current" :class="getCurrentCls(item)"></i>
               <span class="text">{{item.name}}</span>
               <span class="like">
@@ -21,10 +21,10 @@
                 <i class="icon-delete"></i>
               </span>
             </li>
-          </ul>
+          </transition-group>
         </scroll>
         <div class="list-operate">
-          <div class="add">
+          <div class="add" @click="addSong">
             <i class="icon-add"></i>
             <span class="text">添加歌曲到队列</span>
           </div>
@@ -33,22 +33,31 @@
           <span>关闭</span>
         </div>
       </div>
+      <confirm ref="confirm" text="是否清空播放列表" confirm-btn-text="清空" @confirm="clearList"></confirm>
+
+      <add-song ref="addSong"></add-song>
     </div>
   </transition>
 </template>
 
 <script>
   import Scroll from "../../common/scroll/scroll.vue";
+  import Confirm from "../../common/confirm/confirm.vue";
+  import AddSong from "../../content/add-song/add-song.vue";
 
   import {mapGetters, mapMutations, mapActions} from "vuex";
   import {SET_CURRENT_INDEX, SET_PLAYING_STATE} from "../../../store/mutations-types.js";
   import {playMode} from "../../../common/js/config.js";
 
+  import {playerMixin} from "../../../common/js/mixin.js";
+
   export default {
     name: "playlist",
+    mixins: [playerMixin],
     data() {
       return {
-        showFlag: false
+        showFlag: false,
+        delayRefresh: 100
       }
     },
     methods: {
@@ -70,7 +79,7 @@
       },
       selectItem(item, index) {  // 当点击顺序列表中的某一首歌曲的时候 播放歌曲播放列表中对应的歌曲
         if(this.mode === playMode.random) {  // 判断当前的播放状态是不是随机播放 如果是随机播放 那么歌曲播放列表中的歌曲就是乱序的
-          index = this.playlist.findIndex(song => song.id === item.id);  // 那么就要根据当前点击的顺序列表中的歌曲的数据中的id 去乱序的播放列表中找到对应id的歌曲的索引 然后将索引设置给currentIndex完成播放点击的歌曲的业务
+          index = this.playList.findIndex(song => song.id === item.id);  // 那么就要根据当前点击的顺序列表中的歌曲的数据中的id 去乱序的播放列表中找到对应id的歌曲的索引 然后将索引设置给currentIndex完成播放点击的歌曲的业务
         }
         this.setCurrentIndex(index);  // 如果不是随机播放 那么就说明当前歌曲播放列表中的歌曲是和顺序列表中的歌曲顺序是一致的 那么可以直接将点击的顺序列表的索引 设置给currentIndex去播放歌曲播放列表中对应的歌曲
         this.setPlayingState(true);
@@ -78,7 +87,6 @@
       scrollToCurrent(current) {
         const index = this.sequenceList.findIndex(item => item.id === current.id);
         this.$refs.listContent.scrollToElement(this.$refs.listItem[index], 300);
-
       },
       deleteOne(item) {  // 当点击顺序列表中的删除按钮时触发
         this.deleteSong(item);
@@ -86,15 +94,29 @@
           this.showFlag = false;
         }
       },
+      showConfirm() {
+        this.$refs.confirm.show();
+      },
+      clearList() {  // 清空播放列表
+        this.clearSongList();
+        this.hide();
+      },
+      addSong() {  // 添加歌曲到列表
+        this.$refs.addSong.show();
+      },
       ...mapMutations({
         "setCurrentIndex": SET_CURRENT_INDEX,
         "setPlayingState": SET_PLAYING_STATE
       }),
       ...mapActions([
-        "deleteSong"
+        "deleteSong",
+        "clearSongList"
       ])
     },
     computed: {
+      modeText() {  // 根据播放模式返回不同的文字
+        return this.mode === playMode.sequence ? "顺序播放" : this.mode === playMode.loop ? "单曲循环" : "随机播放";
+      },
       ...mapGetters([
         "sequenceList",
         "currentSong",
@@ -111,7 +133,9 @@
       }
     },
     components: {
-      Scroll
+      Scroll,
+      Confirm,
+      AddSong
     }
   }
 </script>

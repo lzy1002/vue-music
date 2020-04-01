@@ -2,6 +2,8 @@ import storage from "good-storage";
 
 const SEARCH_KEY = "__search__";
 const SEARCH_MAX_LENGTH = 15;
+const PLAY_KEY = "__play__";
+const PLAY_MAX_LENGTH = 100;
 
 function insertArray(arr, val, compare, maxLen) {  // 向数组中插入指定内容 并删除数组中已经存在的插入的内容 arr: 要操作的数组  val: 要插入到数组的内容  compare: 查找规则的函数  len: 要操作的数组的最大长度
   const index = arr.findIndex(compare);  // 根据指定的规则查找数组中的索引
@@ -48,6 +50,17 @@ export function clearSearch() {
   return [];
 }
 
+export function savePlay(song) {
+  const playHistoryList = storage.get(PLAY_KEY, []);
+  insertArray(playHistoryList, song, item => item.id === song.id, PLAY_MAX_LENGTH);
+  storage.set(PLAY_KEY, playHistoryList);
+  return playHistoryList;
+}
+
 export function loadSearch() {
   return storage.get(SEARCH_KEY, []);
+}
+
+export function loadPlayHistory() {
+  return storage.get(PLAY_KEY, []);
 }

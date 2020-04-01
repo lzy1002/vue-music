@@ -4,7 +4,7 @@
       <search-box ref="searchBox" @query="search"></search-box>
     </div>
     <div ref="shortcutWrapper" class="shortcut-wrapper" v-show="!query">
-      <scroll class="shortcut" ref="shortcut" :data="shortcut">
+      <scroll class="shortcut" ref="shortcut" :data="shortcut" :delay-refresh="delayRefresh">
         <div>
           <div class="hot-key">
             <h1 class="title">热门搜索</h1>
@@ -44,7 +44,7 @@
   import Confirm from "../../components/common/confirm/confirm.vue";
   import Scroll from "../../components/common/scroll/scroll.vue";
 
-  import {playListMixin} from "../../common/js/mixin.js";
+  import {playListMixin, searchMixin} from "../../common/js/mixin.js";
 
   import {mapActions, mapGetters} from "vuex";
 
@@ -54,12 +54,13 @@
 
   export default {
     name: "search",
-    mixins: [playListMixin],
+    mixins: [playListMixin, searchMixin],
     data() {
       return {
         hotKey: [],
-        query: "",
-        showSinger: true
+        // query: "",  //
+        showSinger: true,
+        delayRefresh: 100
       }
     },
     components: {
@@ -96,22 +97,18 @@
           }
         })
       },
-      addQuery(query) {
-        console.log(query);
-        this.$refs.searchBox.setQuery(query);
-      },
-      search(query) {
-        this.query = query;
-      },
-      blurInput() {
-        this.$refs.searchBox.blur();
-      },
-      saveSearch() {  // 当用户点击了某个搜索结果时 调用actions中的方法将当前用户输入的搜索内容添加到本地存储中对应的数组中并将添加后数组同步到vuex中
-        this.saveSearchHistory(this.query);
-      },
-      deleteSearch(query) {  // 删除传入的搜索结果
-        this.deleteSearchHistory(query);
-      },
+      // search(query) {  //
+      //   this.query = query;
+      // },
+      // blurInput() {  //
+      //   this.$refs.searchBox.blur();
+      // },
+      // saveSearch() {  // 当用户点击了某个搜索结果时 调用actions中的方法将当前用户输入的搜索内容添加到本地存储中对应的数组中并将添加后数组同步到vuex中
+      //   this.saveSearchHistory(this.query);
+      // },
+      // deleteSearch(query) {  // 删除传入的搜索结果
+      //   this.deleteSearchHistory(query);
+      // },
       clearSearch() {  // 清空所有的搜索结果
         this.clearSearchHistory();
       },
@@ -119,8 +116,8 @@
         this.$refs.confirm.show();
       },
       ...mapActions([
-        "saveSearchHistory",
-        "deleteSearchHistory",
+        // "saveSearchHistory",
+        // "deleteSearchHistory",
         "clearSearchHistory"
       ])
     },

@@ -33,6 +33,10 @@
       beforeScroll: {
         type: Boolean,
         default: false
+      },
+      delayRefresh: {
+        type: Number,
+        default: 20
       }
     },
     methods: {
@@ -88,7 +92,7 @@
       data() {  // 监听页面中使用该组件时传递的数据 当传入的数据发生变化时 等待20毫秒后执行一次refresh 重新计算可滚动区域的高度
         window.setTimeout(_ => {
           this.refresh();
-        }, 20)
+        }, this.delayRefresh)
       }
     }
   }
