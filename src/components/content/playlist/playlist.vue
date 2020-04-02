@@ -14,8 +14,8 @@
             <li :key="item.id" ref="listItem" class="item" v-for="(item, index) in sequenceList" @click="selectItem(item, index)">
               <i class="current" :class="getCurrentCls(item)"></i>
               <span class="text">{{item.name}}</span>
-              <span class="like">
-                <i class="icon-not-favorite"></i>
+              <span class="like" @click.stop="changeFavorite(item)">
+                <i :class="getFavoriteIcon(item)"></i>
               </span>
               <span class="delete" @click.stop="deleteOne(item)">
                 <i class="icon-delete"></i>
@@ -49,11 +49,11 @@
   import {SET_CURRENT_INDEX, SET_PLAYING_STATE} from "../../../store/mutations-types.js";
   import {playMode} from "../../../common/js/config.js";
 
-  import {playerMixin} from "../../../common/js/mixin.js";
+  import {playerMixin, favoriteMixin} from "../../../common/js/mixin.js";
 
   export default {
     name: "playlist",
-    mixins: [playerMixin],
+    mixins: [playerMixin, favoriteMixin],
     data() {
       return {
         showFlag: false,

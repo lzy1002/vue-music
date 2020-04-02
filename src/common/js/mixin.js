@@ -90,3 +90,32 @@ export const searchMixin = {
     ])
   }
 };
+
+export const favoriteMixin = {
+  methods: {
+    getFavoriteIcon(currentSong) {
+      const index = this.favoriteList.findIndex(item => item.id === currentSong.id);
+      if (index !== -1) {
+        return "icon-favorite";
+      }
+      return "icon-not-favorite";
+    },
+    changeFavorite(currentSong) {
+      const index = this.favoriteList.findIndex(item => item.id === currentSong.id);
+      if(index !== -1) {
+        this.deleteFavoriteList(currentSong);
+      }else {
+        this.saveFavoriteList(currentSong);
+      }
+    },
+    ...mapActions([
+      "saveFavoriteList",
+      "deleteFavoriteList"
+    ])
+  },
+  computed: {
+    ...mapGetters([
+      "favoriteList"
+    ])
+  }
+};

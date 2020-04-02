@@ -57,7 +57,7 @@
               <i class="icon-next" @click="next"></i>
             </div>
             <div class="icon i-right">
-              <i class="icon icon-not-favorite"></i>
+              <i class="icon" :class="getFavoriteIcon(currentSong)" @click="changeFavorite(currentSong)"></i>
             </div>
           </div>
         </div>
@@ -83,7 +83,7 @@
       </div>
     </transition>
     <play-list ref="playList"></play-list>
-    <audio ref="audio" :src="currentSong.url" @canplay="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
+    <audio ref="audio" :src="currentSong.url" @play="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
   </div>
 </template>
 
@@ -103,7 +103,7 @@
   import animations from "create-keyframe-animation";
   import Lyric from "lyric-parser";
 
-  import {playerMixin} from "../../../common/js/mixin.js";
+  import {playerMixin, favoriteMixin} from "../../../common/js/mixin.js";
 
   const transition = prefixStyle("transition");
   const transitionDuration = prefixStyle("transitionDuration");
@@ -112,7 +112,7 @@
 
   export default {
     name: "player",
-    mixins: [playerMixin],
+    mixins: [playerMixin, favoriteMixin],
     data() {
       return {
         songReady: false,
@@ -230,6 +230,8 @@
         if(!this.songReady) return;  // 判断 只有当 当前歌曲可以播放时才可以点击上一首或者下一首 可以避免错误
         if(this.playList.length === 1) {
           this.loop();
+          this.setPlayingState(true);
+          return;
         }else {
           let index = this.currentIndex - 1;
           if (index === -1) {
@@ -244,6 +246,8 @@
         if(!this.songReady) return;
         if(this.playList.length === 1) {
           this.loop();
+          this.setPlayingState(true);
+          return;
         }else {
           let index = this.currentIndex + 1;
           if (index === this.playList.length) {
@@ -305,6 +309,7 @@
         }
       },
       getLyric() {
+        this.currentLyric && this.currentLyric.stop();
         this.currentSong.getLyric().then(lyric => {  // 调用当前歌曲实例对象中的方法 获取对应当前歌曲的歌词 方法返回promise
           this.currentLyric = new Lyric(lyric, this.handleLyric);  // 使用lyric-parser插件 传入已经转化为汉字的歌词 第二个参数是一个回调函数
           if(this.playing) {
@@ -405,7 +410,8 @@
           this.currentLyric.stop();
           this.currentLineNum = 0;  // 当切换歌曲后 让高亮的歌词行数变为0
         }
-        this.$nextTick(_ => {
+        window.clearTimeout(this.timeId);
+        this.timeId = window.setTimeout(_ => {
           this.$refs.audio.play();
           this.getLyric();
         }, 1000);
@@ -415,7 +421,6 @@
         this.$nextTick(_ => {
           newPlaying ? audio.play() : audio.pause();
         })
-
       }
     },
     components: {

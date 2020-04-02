@@ -2,7 +2,7 @@ import * as types from "./mutations-types.js";
 
 import {shuffle} from "../common/js/utils.js";
 import {playMode} from "../common/js/config.js";
-import {saveSearch, deleteSearch, clearSearch, savePlay} from "../common/js/cache.js";
+import {saveSearch, deleteSearch, clearSearch, savePlay, saveFavorite, deleteFavorite} from "../common/js/cache.js";
 
 export const selectPlay = function ({commit, state}, {list, index}) {  // 用于当点击某个音乐列表中的某个音乐时将整个音乐列表的数据和当前点击的这一项音乐在列表中的索引存入到vuex中对应的state中 同时将播放状态设置为true 播放器全屏设置为true
   commit(types.SET_SEQUENCE_LIST, list);
@@ -123,4 +123,12 @@ export const clearSongList = function ({commit}) {  // 清空播放列表
 
 export const savePlayHistory = function ({commit, state}, song) {  // 存储歌曲到播放历史列表中和本地存储中
   commit(types.SET_PLAY_HISTORY, savePlay(song));
+};
+
+export const saveFavoriteList = function ({commit}, song) {
+  commit(types.SET_FAVORITE_LIST, saveFavorite(song));
+};
+
+export const deleteFavoriteList = function ({commit}, song) {
+  commit(types.SET_FAVORITE_LIST, deleteFavorite(song));
 };

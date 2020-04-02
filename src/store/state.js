@@ -1,5 +1,5 @@
 import {playMode} from "../common/js/config.js";
-import {loadSearch, loadPlayHistory} from "../common/js/cache.js";
+import {loadSearch, loadPlayHistory, loadFavorite} from "../common/js/cache.js";
 
 const state = {
   singer: {},
@@ -12,7 +12,8 @@ const state = {
   disc: {},  // 点击的推荐歌单的数据
   topList: {},  // 点击的rank的数据
   searchHistory: loadSearch(),  // 搜索历史 设置为loadSearch方法的返回值 目的是让每一次刷新页面之后将本地存储中对应的数据同步到这里
-  playHistory: loadPlayHistory()  // 存储播放过的歌曲
+  playHistory: loadPlayHistory(),  // 存储播放过的歌曲
+  favoriteList: loadFavorite()  // 存储收藏的歌曲
 };
 
 export default state;

@@ -29,6 +29,8 @@ export function getDiscList() {
     format: "json"
   });
 
+  console.log(data);
+
   return request({
     url,
     params: data

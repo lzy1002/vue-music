@@ -7,6 +7,12 @@ import fastclick from "fastclick";
 fastclick.attach(document.body);
 
 import vueLazyLoad from "vue-lazyload";
+
+import vConsole from "vconsole";
+new vConsole();
+
+console.log("text");
+
 Vue.use(vueLazyLoad, {
   loading: require("./common/images/default.png")
 });
